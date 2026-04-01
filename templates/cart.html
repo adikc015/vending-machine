@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cart | Vendo</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header class="hero small">
+        <h1>Your Cart</h1>
+        <p>Review items before generating payment QR.</p>
+        <a class="btn ghost" href="{{ url_for('index') }}">Back to Items</a>
+    </header>
+
+    <main class="container">
+        {% if cart_items %}
+            <div class="list">
+                {% for item in cart_items %}
+                <article class="list-item">
+                    <div>
+                        <h2>{{ item.name }}</h2>
+                        <p>{{ item.qty }} x Rs {{ item.price }}</p>
+                    </div>
+                    <form method="POST" action="{{ url_for('remove_item', item_id=item.id) }}">
+                        <button class="btn danger" type="submit">Remove</button>
+                    </form>
+                </article>
+                {% endfor %}
+            </div>
+            <section class="summary">
+                <h3>Total: Rs {{ total }}</h3>
+                <form method="POST" action="{{ url_for('checkout') }}">
+                    <button class="btn" type="submit">Checkout & Generate QR</button>
+                </form>
+            </section>
+        {% else %}
+            <p class="empty">Cart is empty.</p>
+        {% endif %}
+    </main>
+</body>
+</html>

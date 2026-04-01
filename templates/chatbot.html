@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat | Vendo AI Agent</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header class="hero small">
+        <h1>Vendo AI Agent</h1>
+        <p>Talk to our assistant. Ask for items, add to cart, checkout.</p>
+        <a class="btn ghost" href="{{ url_for('index') }}">Back to Shop</a>
+    </header>
+
+    <main class="chat-container">
+        <div class="chat-box">
+            <div class="chat-messages" id="chatMessages">
+                <div class="chat-message agent">
+                    <p style="white-space: pre-line;">Hi! I'm your Vendo AI assistant. Type 'help' for commands or just tell me what you want. Try: "show items" or "add 2 Coke".</p>
+                </div>
+            </div>
+            <form id="chatForm" class="chat-input-area">
+                <input
+                    type="text"
+                    id="chatInput"
+                    placeholder="Type your message..."
+                    autocomplete="off"
+                />
+                <button type="submit" class="btn" id="chatSubmit">Send</button>
+            </form>
+        </div>
+    </main>
+
+    <script>
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const chatForm = document.getElementById('chatForm');
+        const chatSubmit = document.getElementById('chatSubmit');
+
+        function appendMessage(text, sender) {
+            const div = document.createElement('div');
+            div.className = `chat-message ${sender}`;
+
+            const p = document.createElement('p');
+            p.textContent = text;
+            p.style.whiteSpace = 'pre-line';
+            div.appendChild(p);
+
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const message = chatInput.value.trim();
+            if (!message || chatSubmit.disabled) {
+                return;
+            }
+
+            appendMessage(message, 'user');
+            chatInput.value = '';
+            chatInput.disabled = true;
+            chatSubmit.disabled = true;
+
+            try {
+                const response = await fetch('{{ url_for("api_chat") }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+
+                const data = await response.json();
+                appendMessage(data.reply || data.error || 'Something went wrong.', 'agent');
+            } catch (error) {
+                appendMessage(`Error: ${error.message}`, 'agent');
+            } finally {
+                chatInput.disabled = false;
+                chatSubmit.disabled = false;
+                chatInput.focus();
+            }
+        });
+
+        chatInput.focus();
+    </script>
+</body>
+</html>

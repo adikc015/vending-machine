@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendo | Smart Vending</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header class="hero">
+        <h1>Vendo</h1>
+        <p>Pick your snacks. Pay by QR. Done in seconds.</p>
+        <a class="btn ghost" href="{{ url_for('view_cart') }}">Cart ({{ cart_count }})</a>
+    </header>
+
+    <main class="grid">
+        {% for item in items %}
+        <section class="card">
+            <h2>{{ item[1] }}</h2>
+            <p class="price">Rs {{ item[2] }}</p>
+            <p class="stock">In stock: {{ item[3] }}</p>
+            <form method="POST" action="{{ url_for('add_to_cart', item_id=item[0]) }}">
+                <input type="number" name="qty" min="1" max="{{ item[3] }}" value="1" required>
+                <button class="btn" type="submit">Add</button>
+            </form>
+        </section>
+        {% endfor %}
+    </main>
+
+    <!-- Floating Chatbot Icon -->
+    <button id="chatbotToggle" class="chatbot-icon" title="Chat with AI">
+        💬
+    </button>
+
+    <!-- Chatbot Modal -->
+    <div id="chatbotModal" class="chatbot-modal-overlay">
+        <div class="chatbot-modal">
+            <div class="chatbot-header">
+                <h3>Vendo AI Assistant</h3>
+                <button id="chatbotClose" class="chatbot-close">&times;</button>
+            </div>
+            <div class="chatbot-messages" id="chatMessages">
+                <div class="chat-message agent">
+                    <p>Hi! I'm your Vendo AI assistant. Type 'help' for commands or just tell me what you want. Try: "show items" or "add 2 Coke".</p>
+                </div>
+            </div>
+            <form id="chatForm" class="chatbot-input">
+                <input
+                    type="text"
+                    id="chatInput"
+                    placeholder="Type your message..."
+                    autocomplete="off"
+                />
+                <button type="button" class="btn-icon" id="voiceBtn" title="Speak to AI">🎤</button>
+                <button type="submit" class="btn" id="chatSubmit">Send</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const chatbotToggle = document.getElementById('chatbotToggle');
+        const chatbotModal = document.getElementById('chatbotModal');
+        const chatbotClose = document.getElementById('chatbotClose');
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const chatForm = document.getElementById('chatForm');
+        const chatSubmit = document.getElementById('chatSubmit');
+        const voiceBtn = document.getElementById('voiceBtn');
+
+        // Speech Recognition Setup
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = SpeechRecognition ? new SpeechRecognition() : null;
+        let isListening = false;
+
+        if (recognition) {
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = () => {
+                isListening = true;
+                voiceBtn.textContent = '🎤 Listening...';
+                voiceBtn.style.opacity = '0.6';
+            };
+
+            recognition.onend = () => {
+                isListening = false;
+                voiceBtn.textContent = '🎤';
+                voiceBtn.style.opacity = '1';
+            };
+
+            recognition.onerror = (event) => {
+                appendMessage(`Voice error: ${event.error}`, 'agent');
+                isListening = false;
+                voiceBtn.textContent = '🎤';
+                voiceBtn.style.opacity = '1';
+            };
+
+            recognition.onresult = (event) => {
+                let transcript = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    transcript += event.results[i][0].transcript;
+                }
+
+                if (event.results[0].isFinal) {
+                    chatInput.value = transcript;
+                    chatForm.dispatchEvent(new Event('submit'));
+                }
+            };
+
+            voiceBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (!isListening) {
+                    recognition.start();
+                } else {
+                    recognition.stop();
+                }
+            });
+        } else {
+            voiceBtn.style.display = 'none';
+        }
+
+        // Speech Synthesis Setup
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 1;
+                utterance.pitch = 1;
+                utterance.volume = 1;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // Update cart count
+        async function updateCartCount() {
+            try {
+                const response = await fetch('{{ url_for("api_cart_count") }}', {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                const cartLink = document.querySelector('a[href="{{ url_for("view_cart") }}"]');
+                if (cartLink) {
+                    cartLink.textContent = `Cart (${data.cart_count})`;
+                }
+            } catch (error) {
+                console.error('Failed to update cart count:', error);
+            }
+        }
+
+        // Toggle modal
+        chatbotToggle.addEventListener('click', () => {
+            chatbotModal.classList.add('active');
+            chatInput.focus();
+        });
+
+        chatbotClose.addEventListener('click', () => {
+            chatbotModal.classList.remove('active');
+        });
+
+        chatbotModal.addEventListener('click', (e) => {
+            if (e.target === chatbotModal) {
+                chatbotModal.classList.remove('active');
+            }
+        });
+
+        function appendMessage(text, sender) {
+            const div = document.createElement('div');
+            div.className = `chat-message ${sender}`;
+
+            const p = document.createElement('p');
+            p.textContent = text;
+            p.style.whiteSpace = 'pre-line';
+            div.appendChild(p);
+
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const message = chatInput.value.trim();
+            if (!message || chatSubmit.disabled) {
+                return;
+            }
+
+            appendMessage(message, 'user');
+            chatInput.value = '';
+            chatInput.disabled = true;
+            chatSubmit.disabled = true;
+            voiceBtn.disabled = true;
+
+            try {
+                const response = await fetch('{{ url_for("api_chat") }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message }),
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+                const reply = data.reply || data.error || 'Something went wrong.';
+                appendMessage(reply, 'agent');
+                
+                // Speak the response
+                speakText(reply);
+                
+                // Update cart count after any message
+                await updateCartCount();
+                
+                // Refresh if checkout was successful
+                if (message.toLowerCase().includes('checkout') && reply.includes('Checkout complete')) {
+                    setTimeout(() => location.reload(), 1500);
+                }
+            } catch (error) {
+                appendMessage(`Error: ${error.message}`, 'agent');
+            } finally {
+                chatInput.disabled = false;
+                chatSubmit.disabled = false;
+                voiceBtn.disabled = false;
+                chatInput.focus();
+            }
+        });
+    </script>
+</body>
+</html>

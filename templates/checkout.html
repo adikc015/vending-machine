@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout | Vendo</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header class="hero small">
+        <h1>Scan to Pay</h1>
+        <p>Order #{{ order_id }} | Total: Rs {{ total }}</p>
+        <a class="btn ghost" href="{{ url_for('index') }}">Home</a>
+    </header>
+
+    <main class="checkout">
+        <img class="qr" src="{{ url_for('static', filename='qr/' + qr_file) }}" alt="Payment QR">
+        <form method="POST" action="{{ url_for('mark_order_paid', order_id=order_id) }}">
+            <button class="btn" type="submit">I Have Paid</button>
+        </form>
+    </main>
+</body>
+</html>
