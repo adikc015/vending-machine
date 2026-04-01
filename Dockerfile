@@ -7,6 +7,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PORT=5000
 
 COPY requirements.txt ./
+
+RUN mkdir -p /app/static/qr
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
