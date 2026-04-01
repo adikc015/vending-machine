@@ -103,7 +103,15 @@ def generate_qr(order_id, cart):
     img = qrcode.make(upi_link)
     os.makedirs("static/qr", exist_ok=True)
     file_name = f"qr_order_{order_id}.png"
-    file_path = os.path.join("static", "qr", file_name)
+    #file_path = os.path.join("static", "qr", file_name)
+
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    qr_dir = os.path.join(BASE_DIR, "static", "qr")
+    
+    os.makedirs(qr_dir, exist_ok=True)
+    
+    file_path = os.path.join(qr_dir, file_name)
+    
     img.save(file_path)
     return file_name
 
