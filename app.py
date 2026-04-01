@@ -1,5 +1,6 @@
 import os
 import re
+import time
 from contextlib import closing
 
 import mysql.connector
@@ -21,7 +22,16 @@ def get_db_config():
 
 
 def get_connection():
-    return mysql.connector.connect(**get_db_config())
+    for i in range(10):  # retry 10 times
+        try:
+            conn = mysql.connector.connect(**get_db_config())
+            print("✅ Connected to DB")
+            return conn
+        except Exception as e:
+            print(f"❌ DB not ready, retrying... {i+1}/10", e)
+            time.sleep(3)
+    
+    raise Exception("🚨 Database not reachable after retries")
 
 
 def normalize_text(value):
