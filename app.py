@@ -468,7 +468,7 @@ def api_cart_count():
 
 
 if __name__ == "__main__":
-    seed_data()
+    # seed_data()
     app.run(
         host="0.0.0.0",
         port=int(os.getenv("PORT", "5000")),
